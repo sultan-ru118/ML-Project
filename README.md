@@ -37,8 +37,37 @@ Traditional rule-based scoring misses complex *non-linear interactions* between 
 ## ⚙️ Pipeline Overview
 
 ```
-Raw Data → EDA → Feature Engineering → Scaling → Train/Test Split
-    → GridSearchCV (9 Models) → Evaluation → XGBoost + SHAP
+5. THE MACHINE LEARNING PIPELINE
+
+The overall pipeline follows this exact sequence:
+
+RAW DATA
+↓
+Load + Inspect (df.info, describe, isnull)
+↓
+EDA (visualisations, correlation analysis)
+↓
+Encoding (One-Hot for Cancer_Type, Ordinal for Risk_Level)
+↓
+Drop Leakage + Irrelevant Columns
+↓
+Remove Duplicates → Shuffle
+↓
+Feature Matrix X / Target y (train_test_split 80/20)
+↓
+StandardScaler (fit on X_train ONLY, transform both X_train and X_test)
+↓
+GridSearchCV (5-fold CV on training set for each model)
+↓
+Best Estimator Evaluation on Held-Out Test Set
+↓
+SHAP Explainability on Best Model
+
+One critical engineering discipline here: StandardScaler is fit on the training
+set only. If we fit the scaler on the entire dataset before splitting, we
+introduce data leakage — the scaler would have seen the test set's distribution
+and used it to transform both sets. The correct procedure is: fit_transform on
+X_train, transform (not fit_transform) on X_test.
 ```
 
 ---
