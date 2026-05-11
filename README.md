@@ -29,6 +29,7 @@ Traditional rule-based scoring misses complex *non-linear interactions* between 
 ├── Cancer_Risk_Level_Enhanced_claude.ipynb   # Main notebook
 ├── cancer-risk-factors.csv                   # Dataset
 ├── correlation_heatmap.png                   # Saved figure
+├── shap_waterfall_patient12.png              # Saved figure
 └── README.md
 ```
 
@@ -113,9 +114,9 @@ All 9 models were evaluated on the **held-out test set** using four metrics:
 
 > ⚠️ **In cancer risk classification, Recall for the `High` class is clinically critical** — missing a high-risk patient is far more costly than a false alarm.
 
-|| Rank | Model | Accuracy | Precision (macro) | Recall (macro) | F1 Score (macro) |
+| Rank | Model | Accuracy | Precision (macro) | Recall (macro) | F1 Score (macro) |
 |------|-------|----------|-------------------|----------------|------------------|
-| 🥇 | **XGBoost** | **0.8625** | **0.865682** | **0.587839** | **0.650426** |
+| 🥇 | XGBoost | 0.8625 | 0.865682 | 0.587839 | 0.650426 |
 | 🥈 | Gradient Boosting | 0.8700 | 0.835642 | 0.656973 | 0.719733 |
 | 🥉 | AdaBoost | 0.8750 | 0.804944 | 0.703284 | 0.738716 |
 | 4 | Naïve Bayes | 0.8300 | 0.759121 | 0.724006 | 0.736450 |
@@ -124,8 +125,6 @@ All 9 models were evaluated on the **held-out test set** using four metrics:
 | 7 | Logistic Regression | 0.8125 | 0.645918 | 0.874413 | 0.706251 |
 | 8 | KNN | 0.88175 | 0.645227 | 0.475354 | 0.508695 |
 | 9 | Decision Tree | 0.7325 | 0.492172 | 0.501523 | 0.496583 |
-
-> ℹ️ Values above reflect the model ordering from Section 14 of the notebook. Run the notebook to reproduce exact figures on your dataset.
 
 ---
 
