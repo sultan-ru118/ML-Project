@@ -1,4 +1,5 @@
 # 🎗️ Cancer Risk Level Prediction
+
 ### An End-to-End Machine Learning Classification Study
 
 > *A research-quality multi-class classification pipeline covering EDA, Feature Engineering, Hyperparameter Tuning, Multi-Model Comparison, and XGBoost-powered SHAP Explainability.*
@@ -13,7 +14,7 @@ Cancer remains one of the leading causes of mortality worldwide. Early identific
 Traditional rule-based scoring misses complex *non-linear interactions* between features (e.g., how smoking *combined with* air pollution *and* low physical activity compounds risk). Ensemble ML models capture these interactions automatically, producing more robust and interpretable risk scores.
 
 | Item | Detail |
-|------|--------|
+| --- | --- |
 | **Dataset** | `cancer-risk-factors.csv` |
 | **Target** | `Risk_Level` — Low / Medium / High (3-class) |
 | **Models Evaluated** | 9 Classifiers |
@@ -29,7 +30,9 @@ Traditional rule-based scoring misses complex *non-linear interactions* between 
 ├── Cancer_Risk_Level_Enhanced_claude.ipynb   # Main notebook
 ├── cancer-risk-factors.csv                   # Dataset
 ├── correlation_heatmap.png                   # Saved figure
-├── shap_waterfall_patient12.png              # Saved figure
+├── shap_low_risk_sample396.png               # SHAP plot — Low Risk
+├── shap_medium_risk_sample12.png             # SHAP plot — Medium Risk
+├── shap_high_risk_sample14.png               # SHAP plot — High Risk
 └── README.md
 ```
 
@@ -50,14 +53,14 @@ EDA is the most important phase before modelling — it reveals distribution pat
 
 ### 🌡️ Correlation Heatmap — Why It Matters
 
-![Correlation Heatmap](correlation_heatmap.png)
+[![Correlation Heatmap](https://github.com/sultan-ru118/ML-Project/raw/main/correlation_heatmap.png)](https://github.com/sultan-ru118/ML-Project/blob/main/correlation_heatmap.png)
 
 The **Pearson correlation matrix** reveals linear relationships between all numeric features. Values close to **+1 or −1** indicate strong correlation; values near **0** suggest independence.
 
 **Key observations from the heatmap:**
 
 | Observation | Implication |
-|-------------|-------------|
+| --- | --- |
 | `Overall_Risk_Score` has the highest correlation with `Risk_Level` | **Dropped** — it is a composite of the target (data leakage) |
 | `Smoking`, `Air_Pollution`, `Alcohol_Use` show moderate positive correlation with `Risk_Level` | Clinically expected and confirmed as top SHAP drivers |
 | Multicollinearity between one-hot `Cancer_Type` dummies is negligible | Dummy variable trap mitigated effectively |
@@ -69,7 +72,7 @@ The **Pearson correlation matrix** reveals linear relationships between all nume
 ## 🛠️ Feature Engineering & Preprocessing
 
 | Step | Method | Reason |
-|------|--------|--------|
+| --- | --- | --- |
 | Categorical encoding | One-Hot Encoding (`Cancer_Type`) | Nominal — no ordinal relationship |
 | Target encoding | Ordinal map: Low→0, Medium→1, High→2 | Preserves severity ordering |
 | ID removal | Drop `Patient_ID` | Identifier — no predictive value |
@@ -87,7 +90,7 @@ The **Pearson correlation matrix** reveals linear relationships between all nume
 All models were tuned with **GridSearchCV (5-fold CV)** scored on **weighted F1** — chosen over raw accuracy because it handles class imbalance and penalises both false positives and false negatives simultaneously.
 
 | Model | Key Tuned Parameters | Why This Model |
-|-------|---------------------|----------------|
+| --- | --- | --- |
 | Logistic Regression | `C`, `solver` | Linear interpretable baseline |
 | K-Nearest Neighbours | `n_neighbors`, `weights='distance'` | Non-parametric, instance-based |
 | Gaussian Naïve Bayes | — | Fast probabilistic sanity-check |
@@ -103,19 +106,8 @@ All models were tuned with **GridSearchCV (5-fold CV)** scored on **weighted F1*
 
 ## 📈 Model Performance Comparison
 
-All 9 models were evaluated on the **held-out test set** using four metrics:
-
-| Metric | What It Measures | Why It Matters Here |
-|--------|-----------------|---------------------|
-| **Accuracy** | Overall correct predictions / total | General performance gauge |
-| **Precision** (macro) | TP / (TP + FP) per class, averaged | Minimise false alarms |
-| **Recall** (macro) | TP / (TP + FN) per class, averaged | Minimise missed high-risk patients |
-| **F1 Score** (macro) | Harmonic mean of Precision & Recall | Balanced metric for imbalanced classes |
-
-> ⚠️ **In cancer risk classification, Recall for the `High` class is clinically critical** — missing a high-risk patient is far more costly than a false alarm.
-
 | Rank | Model | Accuracy | Precision (macro) | Recall (macro) | F1 Score (macro) |
-|------|-------|----------|-------------------|----------------|------------------|
+| --- | --- | --- | --- | --- | --- |
 | 🥇 | XGBoost | 0.8625 | 0.865682 | 0.587839 | 0.650426 |
 | 🥈 | Gradient Boosting | 0.8700 | 0.835642 | 0.656973 | 0.719733 |
 | 🥉 | AdaBoost | 0.8750 | 0.804944 | 0.703284 | 0.738716 |
@@ -134,18 +126,18 @@ XGBoost (Extreme Gradient Boosting) outperforms all other models in this study f
 
 **1. It builds on Gradient Boosting — but fixes its weaknesses**
 
-Gradient Boosting trains trees sequentially, where each new tree corrects the errors (residuals) of the previous ones. This is powerful, but vanilla GB tends to overfit on noisy medical data. XGBoost adds **L1/L2 regularisation** (`gamma`, `lambda`) directly into the tree-building objective — penalising model complexity as it learns. This prevents memorising noise while still capturing real patterns.
+Gradient Boosting trains trees sequentially, where each new tree corrects the errors (residuals) of the previous ones. XGBoost adds **L1/L2 regularisation** (`gamma`, `lambda`) directly into the tree-building objective — penalising model complexity as it learns.
 
 **2. It captures the non-linear risk interactions that simpler models miss**
 
-Linear models (Logistic Regression, Naïve Bayes) assume features act independently and additively. In cancer risk, that assumption fails — the compounding effect of *Smoking + Air_Pollution + low Physical_Activity* is far greater than their individual sums. XGBoost's deep trees capture these **multiplicative feature interactions** naturally, at multiple levels of depth, in every boosting round.
+The compounding effect of *Smoking + Air_Pollution + low Physical_Activity* is far greater than their individual sums. XGBoost's deep trees capture these **multiplicative feature interactions** naturally.
 
 **3. Stochastic training prevents overfitting further**
 
-The tuned model uses `subsample=0.8` — meaning each tree only sees 80% of the training rows (randomly sampled). This introduces healthy randomness, similar to Random Forest, which reduces variance. Combined with regularisation, XGBoost gets the best of both worlds: the bias-reduction of boosting and the variance-reduction of bagging.
+The tuned model uses `subsample=0.8` — each tree only sees 80% of training rows, introducing healthy randomness that reduces variance.
 
 | What others do wrong | Why XGBoost handles it |
-|----------------------|------------------------|
+| --- | --- |
 | Logistic Regression — linear boundary only | XGBoost learns non-linear splits at every node |
 | Decision Tree — overfits without depth control | Regularisation + depth tuning controls complexity |
 | Random Forest — all trees independent, no correction | Boosting corrects residuals from previous trees |
@@ -154,55 +146,165 @@ The tuned model uses `subsample=0.8` — meaning each tree only sees 80% of the 
 
 ---
 
-## 🔍 Explainable AI — SHAP Analysis
+<!-- ============================================================ -->
+<!--        ✨ EXPLAINABLE AI — SHAP SECTION                     -->
+<!-- ============================================================ -->
 
-**Why SHAP instead of standard feature importance?**  
-Standard Gini-based importance only shows *how often* a feature is used in splits. SHAP (SHapley Additive exPlanations) uses game theory to show *how much* each feature **pushes a specific prediction up or down** — enabling both global population-level and local per-patient explanations.
+## 🔍 Explainable AI — SHAP Analysis ⭐ 
 
-### Global Feature Importance — SHAP Bar Plot
+> **"Predicting the risk level is not enough — we must explain WHY the model made that decision."**
+>
+> This section is the **most important contribution** of this project.
+> Using SHAP, every single prediction is made **transparent, trustworthy, and clinically actionable**.
 
-The SHAP summary bar plot shows the **mean absolute SHAP value** per feature across all test samples — a true measure of global impact, not just split frequency.
+---
 
-**Top drivers (globally):**
+### 🧠 What is SHAP?
+
+**SHAP = SH**apley **A**dditive ex**P**lanations — uses game theory to assign each feature a contribution score.
+
+```
+f(x)  =  E[f(X)]  +  Σ (all SHAP contributions)
+Final =  Baseline +  Sum of all feature pushes
+```
+
+| Bar Colour | Meaning |
+|---|---|
+| 🔴 Pink/Red | Feature **pushes** prediction toward this risk class |
+| 🔵 Blue | Feature **resists** this prediction |
+| Left number | Negative = patient value is **LOW** · Positive = patient value is **HIGH** |
+
+---
+
+### 🌐 Global Feature Importance
 
 | Rank | Feature | Direction | Clinical Significance |
-|------|---------|-----------|----------------------|
+|---|---|---|---|
 | 1 | `Smoking` | ↑ High Risk | #1 modifiable cancer risk factor globally |
 | 2 | `Air_Pollution` | ↑ High Risk | Chronic carcinogen inhalation |
 | 3 | `Alcohol_Use` | ↑ High Risk | Linked to 7+ cancer types |
-| 4 | `Physical_Activity_Level` | ↓ High Risk | Protective lifestyle factor |
-| 5 | `Age` | ↑ High Risk | Biological risk amplifier |
+| 4 | `Physical_Activity_Level` | ↓ Protective | Reduces risk when high |
+| 5 | `Occupational_Hazards` | ↑ High Risk | Workplace carcinogen exposure |
 
-### 🌊 Patient-Level — SHAP Waterfall Plot
+---
 
-```python
-shap.plots.waterfall(shap_values[12, :, 1])
-```
+### 🌊 SHAP Waterfall Plots — Three Risk Level Cases
 
-The waterfall plot decomposes a **single patient's prediction** step-by-step — starting from the model's average output (base value, here ≈ 0.312) and showing how each feature pushes the final prediction up (🔴 red) or down (🔵 blue).
+> One representative patient selected per risk class.
+> Each plot shows **step-by-step** how the model reached its decision.
 
-![SHAP Waterfall — Patient Index 12](shap_waterfall_patient12.png)
+---
 
-**Reading this plot for Patient #12:**
+#### 🟢 CASE 1 — LOW RISK · Sample 396 · Class 0
 
-| Feature | Raw Value | SHAP | What It Means |
-|---------|-----------|------|---------------|
-| `Smoking` | 1.457 (high) | **+0.71** | Single biggest driver — alone raises risk by 0.71 units |
-| `Air_Pollution` | 1.459 (high) | **+0.23** | Chronic carcinogen exposure compounds the risk |
-| `Alcohol_Use` | moderate | **+0.18** | Adds further upward pressure |
-| `Physical_Activity` | 0.019 (very low) | **−0.16** | Slight protective pull — but overwhelmed by risk factors |
+![SHAP Waterfall — Low Risk Sample 396](https://github.com/sultan-ru118/ML-Project/raw/main/shap_low_risk_sample396.png)
 
-> **Why this matters clinically:** The model doesn't just say "this patient is High risk" — it explains *exactly which features* drove that verdict and by how much. A clinician can act on this: the patient should first address smoking (SHAP = +0.71), then reduce pollution exposure, then increase physical activity. The explanation is **ranked, quantified, and actionable**.
+| Metric | Value |
+|---|---|
+| Baseline `E[f(X)]` | −2.644 |
+| Final Score `f(x)` | **+4.533** |
+| Score Shift | **+7.18** |
+| Prediction | ✅ Low Risk (Class 0) |
 
-### Class-Specific SHAP Bar Plots
+| Feature | Value | SHAP | Meaning |
+|---|---|---|---|
+| `Alcohol_Use` | −1.544 → **LOW** | **+1.79** 🔴 | Low alcohol → strong low-risk signal |
+| `Obesity` | −1.623 → **LOW** | **+1.59** 🔴 | Not obese → model confident |
+| `Air_Pollution` | −1.660 → **LOW** | **+1.47** 🔴 | Clean air environment |
+| `Smoking` | −0.950 → **LOW** | **+1.26** 🔴 | Non-smoker |
+| `Diet_Red_Meat` | +1.525 → **HIGH** | **−0.95** 🔵 | Only opposing factor |
 
-SHAP supports multi-output models natively, showing feature importance **separately per risk class**:
+> **Conclusion:** All major risk factors are LOW. Healthy lifestyle features
+> greatly outweighed the high red meat concern → **Low Risk ✅**
 
-- **Low Risk class:** High `Physical_Activity` and low `Smoking` are protective.
-- **Medium Risk class:** Mixed moderate signals across several features.
-- **High Risk class:** `Smoking`, `Air_Pollution`, `Alcohol_Use`, and low `Physical_Activity_Level` consistently dominate.
+---
 
-This class-level breakdown is invaluable for **targeted public health intervention design**.
+#### 🟡 CASE 2 — MEDIUM RISK · Sample 12 · Class 1
+
+![SHAP Waterfall — Medium Risk Sample 12](https://github.com/sultan-ru118/ML-Project/raw/main/shap_medium_risk_sample12.png)
+
+| Metric | Value |
+|---|---|
+| Baseline `E[f(X)]` | +0.353 |
+| Final Score `f(x)` | **+1.457** |
+| Score Shift | **+1.10** |
+| Prediction | ⚠️ Medium Risk (Class 1) |
+
+| Feature | Value | SHAP | Meaning |
+|---|---|---|---|
+| `Smoking` | +1.457 → **HIGH** | **+0.71** 🔴 | ← **#1 biggest driver** |
+| `Air_Pollution` | +1.459 → **HIGH** | **+0.23** 🔴 | Compounds smoking effect |
+| `Alcohol_Use` | +0.296 → Moderate | **+0.23** 🔴 | Adds pressure |
+| `Physical_Activity` | +0.019 | **−0.16** 🔵 | Slight resistance |
+| `Diet_Salted_Processed` | −1.154 → **LOW** | **−0.16** 🔵 | Healthy diet resists — not enough |
+
+> **Conclusion:** Smoking alone elevated this patient from Low → Medium risk.
+> Even a healthy diet could not overcome smoking + pollution → **Medium Risk ⚠️**
+
+---
+
+#### 🔴 CASE 3 — HIGH RISK · Sample 14 · Class 2
+
+![SHAP Waterfall — High Risk Sample 14](https://github.com/sultan-ru118/ML-Project/raw/main/shap_high_risk_sample14.png)
+
+| Metric | Value |
+|---|---|
+| Baseline `E[f(X)]` | −3.386 |
+| Final Score `f(x)` | **+3.368** |
+| Score Shift | **+6.75** ← Largest shift |
+| Prediction | 🚨 High Risk (Class 2) |
+
+| Feature | Value | SHAP | Meaning |
+|---|---|---|---|
+| `Occupational_Hazards` | +1.563 → **HIGH** | **+2.27** 🔴 | ← **#1 driver — dangerous job** |
+| `Alcohol_Use` | +0.909 → **HIGH** | **+1.69** 🔴 | Heavy alcohol use |
+| `Air_Pollution` | +0.835 → **HIGH** | **+1.17** 🔴 | High pollution exposure |
+| `Smoking` | +1.457 → **HIGH** | **+1.18** 🔴 | Heavy smoker |
+| `Family_History` | +2.035 → **HIGH** | **+0.23** 🔴 | Genetic predisposition |
+| `Diet_Salted_Processed` | −0.506 → LOW | **−0.78** 🔵 | Healthy diet — too weak |
+| `Obesity` | −0.316 → LOW | **−0.33** 🔵 | Not obese — small resistance |
+
+> **Conclusion:** 5 simultaneous high-risk factors overwhelmed all protective factors.
+> Model correctly issued: **High Risk 🚨**
+
+---
+
+### 📋 SHAP Comparison — All Three Risk Levels
+
+| | 🟢 LOW (0) | 🟡 MEDIUM (1) | 🔴 HIGH (2) |
+|---|---|---|---|
+| **Sample** | 396 | 12 | 14 |
+| **Baseline** | −2.644 | +0.353 | −3.386 |
+| **Final f(x)** | **+4.533** | **+1.457** | **+3.368** |
+| **Score Shift** | +7.18 | +1.10 | +6.75 |
+| **#1 Driver** | None dominant | Smoking +0.71 | Occ. Hazards +2.27 |
+| **HIGH features** | 1 only | 2–3 | 5+ |
+| **Pattern** | All values LOW | 1–2 factors HIGH | Multiple HIGH |
+
+### 🔑 Key SHAP Insight
+
+> As risk level increases **Low → Medium → High**:
+> - More **red bars** appear → more active risk factors
+> - SHAP values get **larger** → each factor pushes harder
+> - Score shift becomes **more dramatic**
+> - Protective blue bars become **too small** to resist
+>
+> This confirms the model has learned **clinically meaningful, compounding risk patterns.**
+
+---
+
+### 🏥 Why This Matters Clinically
+
+| Stakeholder | What SHAP Gives Them |
+|---|---|
+| **Doctor** | Ranked list of *why* a patient is high risk → actionable treatment plan |
+| **Patient** | Clear modifiable factors (smoking, diet, activity) → personal prevention guide |
+| **Researcher** | Quantified, reproducible feature importance → publishable evidence |
+| **Policy Maker** | Top factors (Smoking + Air Pollution) → public health priority targets |
+
+<!-- ============================================================ -->
+<!--        END OF SHAP SECTION                                   -->
+<!-- ============================================================ -->
 
 ---
 
@@ -229,10 +331,8 @@ This class-level breakdown is invaluable for **targeted public health interventi
 
 ## 📓 What This Notebook Does — Section by Section
 
-A quick map of the full `Cancer_Risk_Level_Enhanced_claude.ipynb` pipeline:
-
 | Section | What I Did | Why |
-|---------|-----------|-----|
+| --- | --- | --- |
 | §1 Business Problem | Defined the clinical question: stratify patients into Low / Medium / High cancer risk | Anchors all design decisions in a real medical need |
 | §2–3 Data Loading | Loaded `cancer-risk-factors.csv`, inspected shape, dtypes, nulls, target distribution | Zero missing values — no imputation needed |
 | §4 EDA | Pie charts, bar, box, count, and boxen plots across key features | Uncovered class balance, gender splits, BMI–cancer links, smoking–lung correlation |
@@ -245,14 +345,14 @@ A quick map of the full `Cancer_Risk_Level_Enhanced_claude.ipynb` pipeline:
 | §12 GridSearchCV | Tuned 6 models (LR, KNN, GNB, SVM, DT, RF) via 5-fold CV on weighted F1 | Finds optimal hyperparameters without test set leakage |
 | §13 Boosting | Tuned AdaBoost, Gradient Boosting, XGBoost | Advanced ensemble methods that outperform single trees |
 | §14 Comparison | Ranked all 9 models on Accuracy, Precision, Recall, F1 | Identified XGBoost as the top performer |
-| §15 SHAP | Applied SHAP to XGBoost: global bar, waterfall (patient #12), per-class bars | Made model decisions transparent and clinically auditable |
+| §15 SHAP | Global bar + three waterfall plots (Low/Medium/High) + per-class bars | Made model decisions transparent and clinically auditable |
 | §16 Conclusion | Summarised key findings, feature rankings, future improvements | Research-ready writeup with clinical and policy implications |
 
 ---
 
 ## 🛠️ Requirements
 
-```bash
+```
 pip install pandas numpy matplotlib seaborn scikit-learn xgboost shap
 ```
 
@@ -260,7 +360,7 @@ pip install pandas numpy matplotlib seaborn scikit-learn xgboost shap
 
 ## 🚀 Usage
 
-```bash
+```
 # Clone and run
 jupyter notebook Cancer_Risk_Level_Enhanced_claude.ipynb
 ```
@@ -273,4 +373,4 @@ This project is built for research and educational purposes.
 
 ---
 
-<p align="center">🎗️ Built for Cancer Risk Research · Powered by XGBoost + SHAP</p>
+🎗️ Built for Cancer Risk Research · Powered by XGBoost + SHAP
